@@ -1,0 +1,6 @@
+Flask
+scikit-learn
+nltk
+python-docx
+python-dotenv
+flask_cors
