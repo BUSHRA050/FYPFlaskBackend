@@ -4,3 +4,5 @@ nltk
 python-docx
 python-dotenv
 flask_cors
+gunicorn
+pymongo

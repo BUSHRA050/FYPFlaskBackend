@@ -24,7 +24,7 @@ database_name = os.getenv("DATABASE_NAME")
 jobs_collection_name = os.getenv("JOB_COLLECTION_NAME")
 resume_collection_name = os.getenv("RESUME_COLLECTION_NAME")
 
-uri = f"mongodb+srv://{atlas_username}:{atlas_password}@{atlas_cluster_uri}/?retryWrites=true&w=majority&appName=Cluster0"
+uri = f"mongodb+srv://bhsjobportal:fbz4lRVJYtXs7qKe@cluster0.itkhalq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 client = MongoClient(uri, server_api=ServerApi('1'))
 
@@ -100,6 +100,8 @@ def analyze_resume_and_job_api():
     resume_text += resume_data.get("jobDescription", "") + "\n"
     resume_text += resume_data.get("objective", "") + "\n"
     resume_text += resume_data.get("about", "") + "\n"
+
+
 
     cos_sim_percent = analyze_resume(job_description, resume_text)
 
