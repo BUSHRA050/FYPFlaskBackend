@@ -11,7 +11,7 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from bson import ObjectId
 import numpy as np
-
+import sys
 nltk.download('stopwords')
 
 app = Flask(__name__)
@@ -124,6 +124,15 @@ def analyze_resume_and_job_api():
         'Jaccard Similarity': jaccard_sim_percent,
         'Minkowski Distance': minkowski_sim_percent
     }
+
+    print("Cosine Similarity Score:", cos_sim_percent)
+    sys.stdout.flush()
+
+    print("Jaccard Similarity Score:", jaccard_sim_percent)
+    sys.stdout.flush()
+
+    print("Minkowski Distance Score:", minkowski_sim_percent)
+    sys.stdout.flush()
 
     best_algo = max(similarity_scores, key=similarity_scores.get)
     best_score = similarity_scores[best_algo]
