@@ -10,20 +10,22 @@ from pymongo import MongoClient
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from bson import ObjectId
+import numpy as np
 
 nltk.download('stopwords')
 
 app = Flask(__name__)
 CORS(app) 
 
+# atlas_username = os.getenv("ATLAS_USERNAME")
+# atlas_password = os.getenv("ATLAS_PASSWORD")
+# atlas_cluster_uri = os.getenv("ATLAS_CLUSTER_URI")
+# database_name = os.getenv("DATABASE_NAME")
+# jobs_collection_name = os.getenv("JOB_COLLECTION_NAME")
+# resume_collection_name = os.getenv("RESUME_COLLECTION_NAME")
 
-atlas_username = os.getenv("ATLAS_USERNAME")
-atlas_password = os.getenv("ATLAS_PASSWORD")
-atlas_cluster_uri = os.getenv("ATLAS_CLUSTER_URI")
-database_name = os.getenv("DATABASE_NAME")
-jobs_collection_name = os.getenv("JOB_COLLECTION_NAME")
-resume_collection_name = os.getenv("RESUME_COLLECTION_NAME")
-
+jobs_collection_name ="Jobs"
+resume_collection_name = "Resume"
 uri = f"mongodb+srv://bhsjobportal:fbz4lRVJYtXs7qKe@cluster0.itkhalq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 client = MongoClient(uri, server_api=ServerApi('1'))
@@ -32,15 +34,13 @@ try:
     client.admin.command('ping')
     print("Pinged your deployment. You successfully connected to MongoDB!")
 except Exception as e:
-    print("Mongo Db Error: ",e)
+    print("Mongo Db Error: ", e)
 
 client = MongoClient(uri)
-db = client[database_name]
+db = client["test"]
 
-# Define job_collection and resume_collection
 job_collection = db[jobs_collection_name]
 resume_collection = db[resume_collection_name]
-
 # # Print data in job_collection
 # print("Data in job_collection:")
 # for job_document in job_collection.find():
@@ -54,15 +54,13 @@ resume_collection = db[resume_collection_name]
 # ====>     PREPROCESSING TEXT <====
 def preprocess_text(text):
     text = text.lower()
-    text = re.sub(r'[^a-zA-Z0-9\s]','',text)
+    text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
     tokens = text.split()
     stop_words = set(stopwords.words('english'))
     tokens = [token for token in tokens if token not in stop_words]
-    preprocessed_text = ' '.join(tokens)
+    preprocessed_text = ' '.join(set(tokens))  # Remove duplicates using set
     return preprocessed_text
 
-
-# ====>     RESUME ANALYZER <====
 def analyze_resume(job_description, resume):
     vectorizer = TfidfVectorizer(preprocessor=preprocess_text)
     job_vec = vectorizer.fit_transform([job_description])
@@ -73,13 +71,29 @@ def analyze_resume(job_description, resume):
     
     return cos_sim_percent
 
+def jaccard_similarity(job_description, resume):
+    preprocessed_job_description = preprocess_text(job_description)
+    preprocessed_resume = preprocess_text(resume)
+    query_words = set(preprocessed_job_description.split())
+    document_words = set(preprocessed_resume.split())
+    intersection = len(query_words.intersection(document_words))
+    union = len(query_words.union(document_words))
+    return intersection / union * 100
+
+def minkowski_distance(job_description, resume, p=2):
+    vectorizer = TfidfVectorizer(preprocessor=preprocess_text)
+    job_vec = vectorizer.fit_transform([job_description])
+    resume_vec = vectorizer.transform([resume])
+
+    minkowski_dist = np.linalg.norm((job_vec - resume_vec).toarray(), ord=p)
+    minkowski_sim = 1 / (1 + minkowski_dist)
+    return minkowski_sim * 100
 
 @app.route('/analyze_resume_and_job', methods=['POST'])
 def analyze_resume_and_job_api():
     if 'job_id' not in request.json or 'user_id' not in request.json:
         return jsonify({'Error': 'Job ID or User ID is missing'})
-
-    # Convert job_id string to ObjectId
+ # Convert job_id string to ObjectId
     job_id = ObjectId(request.json['job_id'])
     user_id = request.json['user_id']
 
@@ -91,8 +105,8 @@ def analyze_resume_and_job_api():
 
     job_description = job_description_data.get("description", "")
     resume_text = ""
-
     # Add relevant fields from the resume data to the resume_text
+
     resume_text += resume_data.get("name", "") + "\n"
     resume_text += resume_data.get("location", "") + "\n"
     resume_text += resume_data.get("phone", "") + "\n"
@@ -101,17 +115,25 @@ def analyze_resume_and_job_api():
     resume_text += resume_data.get("objective", "") + "\n"
     resume_text += resume_data.get("about", "") + "\n"
 
-
-
     cos_sim_percent = analyze_resume(job_description, resume_text)
+    jaccard_sim_percent = jaccard_similarity(job_description, resume_text)
+    minkowski_sim_percent = minkowski_distance(job_description, resume_text)
 
-    if cos_sim_percent > 40:
+    similarity_scores = {
+        'Cosine Similarity': cos_sim_percent,
+        'Jaccard Similarity': jaccard_sim_percent,
+        'Minkowski Distance': minkowski_sim_percent
+    }
+
+    best_algo = max(similarity_scores, key=similarity_scores.get)
+    best_score = similarity_scores[best_algo]
+
+    if best_score > 40:
         eligibility = "Hooray! You're Eligible to Apply"
     else:
         eligibility = "Sorry! You're not Eligible for this Job"
     
-    return jsonify({'Cosine_Similarity': cos_sim_percent, 'Eligibility': eligibility}), 200
-
+    return jsonify({'Best_Score_Algo': best_algo, 'Score': best_score, 'Eligibility': eligibility}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
