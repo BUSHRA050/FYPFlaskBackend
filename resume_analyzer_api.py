@@ -107,12 +107,12 @@ def analyze_resume_and_job_api():
     resume_text = ""
     # Add relevant fields from the resume data to the resume_text
 
-    resume_text += resume_data.get("name", "") + "\n"
-    resume_text += resume_data.get("location", "") + "\n"
-    resume_text += resume_data.get("phone", "") + "\n"
-    resume_text += resume_data.get("email", "") + "\n"
+    # resume_text += resume_data.get("name", "") + "\n"
+    # resume_text += resume_data.get("location", "") + "\n"
+    # resume_text += resume_data.get("phone", "") + "\n"
+    # resume_text += resume_data.get("email", "") + "\n"
     resume_text += resume_data.get("jobDescription", "") + "\n"
-    resume_text += resume_data.get("objective", "") + "\n"
+    # resume_text += resume_data.get("objective", "") + "\n"
     resume_text += resume_data.get("about", "") + "\n"
 
     cos_sim_percent = analyze_resume(job_description, resume_text)
