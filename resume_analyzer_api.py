@@ -12,7 +12,11 @@ from pymongo.server_api import ServerApi
 from bson import ObjectId
 import numpy as np
 import sys
+from nltk.stem import PorterStemmer
+
 nltk.download('stopwords')
+
+
 
 app = Flask(__name__)
 CORS(app) 
@@ -51,16 +55,21 @@ resume_collection = db[resume_collection_name]
 # for resume_document in resume_collection.find():
 #     print(resume_document)
 
+# Initialize the Porter Stemmer
+stemmer = PorterStemmer()
 # ====>     PREPROCESSING TEXT <====
 def preprocess_text(text):
     text = text.lower()
     text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
     tokens = text.split()
     stop_words = set(stopwords.words('english'))
-    tokens = [token for token in tokens if token not in stop_words]
+    # tokens = [token for token in tokens if token not in stop_words]
+    tokens = [stemmer.stem(token) for token in tokens if token not in stop_words]  # Apply stemming
     preprocessed_text = ' '.join(set(tokens))  # Remove duplicates using set
+    print(preprocessed_text)
+    sys.stdout.flush()
     return preprocessed_text
-
+   
 def analyze_resume(job_description, resume):
     vectorizer = TfidfVectorizer(preprocessor=preprocess_text)
     job_vec = vectorizer.fit_transform([job_description])
@@ -137,7 +146,7 @@ def analyze_resume_and_job_api():
     best_algo = max(similarity_scores, key=similarity_scores.get)
     best_score = similarity_scores[best_algo]
 
-    if best_score > 40:
+    if best_score > 50:
         eligibility = "Hooray! You're Eligible to Apply"
     else:
         eligibility = "Sorry! You're not Eligible for this Job"
