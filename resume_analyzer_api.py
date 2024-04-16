@@ -16,17 +16,8 @@ from nltk.stem import PorterStemmer
 
 nltk.download('stopwords')
 
-
-
 app = Flask(__name__)
 CORS(app) 
-
-# atlas_username = os.getenv("ATLAS_USERNAME")
-# atlas_password = os.getenv("ATLAS_PASSWORD")
-# atlas_cluster_uri = os.getenv("ATLAS_CLUSTER_URI")
-# database_name = os.getenv("DATABASE_NAME")
-# jobs_collection_name = os.getenv("JOB_COLLECTION_NAME")
-# resume_collection_name = os.getenv("RESUME_COLLECTION_NAME")
 
 jobs_collection_name ="Jobs"
 resume_collection_name = "Resume"
@@ -45,15 +36,6 @@ db = client["test"]
 
 job_collection = db[jobs_collection_name]
 resume_collection = db[resume_collection_name]
-# # Print data in job_collection
-# print("Data in job_collection:")
-# for job_document in job_collection.find():
-#     print(job_document)
-
-# # Print data in resume_collection
-# print("\nData in resume_collection:")
-# for resume_document in resume_collection.find():
-#     print(resume_document)
 
 # Initialize the Porter Stemmer
 stemmer = PorterStemmer()
@@ -63,9 +45,8 @@ def preprocess_text(text):
     text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
     tokens = text.split()
     stop_words = set(stopwords.words('english'))
-    # tokens = [token for token in tokens if token not in stop_words]
-    tokens = [stemmer.stem(token) for token in tokens if token not in stop_words]  # Apply stemming
-    preprocessed_text = ' '.join(set(tokens))  # Remove duplicates using set
+    tokens = [stemmer.stem(token) for token in tokens if token not in stop_words]  
+    preprocessed_text = ' '.join(set(tokens))  
     print(preprocessed_text)
     sys.stdout.flush()
     return preprocessed_text
@@ -74,10 +55,8 @@ def analyze_resume(job_description, resume):
     vectorizer = TfidfVectorizer(preprocessor=preprocess_text)
     job_vec = vectorizer.fit_transform([job_description])
     resume_vec = vectorizer.transform([resume])
-
     cos_sim = cosine_similarity(job_vec, resume_vec)[0][0]
-    cos_sim_percent = cos_sim * 100
-    
+    cos_sim_percent = cos_sim * 100  
     return cos_sim_percent
 
 def jaccard_similarity(job_description, resume):
@@ -93,7 +72,6 @@ def minkowski_distance(job_description, resume, p=2):
     vectorizer = TfidfVectorizer(preprocessor=preprocess_text)
     job_vec = vectorizer.fit_transform([job_description])
     resume_vec = vectorizer.transform([resume])
-
     minkowski_dist = np.linalg.norm((job_vec - resume_vec).toarray(), ord=p)
     minkowski_sim = 1 / (1 + minkowski_dist)
     return minkowski_sim * 100
@@ -114,14 +92,7 @@ def analyze_resume_and_job_api():
 
     job_description = job_description_data.get("description", "")
     resume_text = ""
-    # Add relevant fields from the resume data to the resume_text
-
-    # resume_text += resume_data.get("name", "") + "\n"
-    # resume_text += resume_data.get("location", "") + "\n"
-    # resume_text += resume_data.get("phone", "") + "\n"
-    # resume_text += resume_data.get("email", "") + "\n"
     resume_text += resume_data.get("jobDescription", "") + "\n"
-    # resume_text += resume_data.get("objective", "") + "\n"
     resume_text += resume_data.get("about", "") + "\n"
 
     cos_sim_percent = analyze_resume(job_description, resume_text)
@@ -146,7 +117,7 @@ def analyze_resume_and_job_api():
     best_algo = max(similarity_scores, key=similarity_scores.get)
     best_score = similarity_scores[best_algo]
 
-    if best_score > 50:
+    if best_score >= 50:
         eligibility = "Hooray! You're Eligible to Apply"
     else:
         eligibility = "Sorry! You're not Eligible for this Job"
